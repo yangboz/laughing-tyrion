@@ -7,10 +7,28 @@
 	<fx:Script>
 
 		<![CDATA[
+			import leelib.util.flvEncoder.ByteArrayFlvEncoder;
+			import leelib.util.flvEncoder.FlvEncoder;
+			
 			import leelibExamples.flvEncoder.basic.StaticAudioExampleApp;
 			
 			import mx.collections.ArrayList;
+			import mx.core.UIComponent;
+			import mx.events.DragEvent;
 			import mx.events.FlexEvent;
+			import mx.managers.CursorManager;
+			import mx.managers.DragManager;
+			//
+			[Embed(source="./assets/hello.mp3")]
+			private static const Soundtrack:Class;
+			
+			private const OUTPUT_WIDTH:Number = 320;
+			private const OUTPUT_HEIGHT:Number = 240;
+			private const FLV_FRAMERATE:int = 30;
+			private var _sound:Sound;
+			private var _soundChannel:SoundChannel;
+			private var _bitmaps:Array =[];
+			private var _baFlvEncoder:ByteArrayFlvEncoder;
 			//
 			protected function windowedapplication_creationCompleteHandler(event:FlexEvent):void
 			{
@@ -20,13 +38,99 @@
 					{id:'tpl_002',icon:'2.jpg'},
 					{id:'tpl_003',icon:'3.jpg'}
 				]);
+				//register for the drag enter event
+				addEventListener(NativeDragEvent.NATIVE_DRAG_ENTER, onNativeDragEnter);
 				
+				//register for the drag drop event
+				addEventListener(NativeDragEvent.NATIVE_DRAG_DROP, onNativeDragDrop);
 			}
 			
 			protected function button_start_clickHandler(event:MouseEvent):void
 			{
+				CursorManager.setBusyCursor();
 				//
-				id_sve.addChild(new StaticAudioExampleApp());
+//				id_sve.addChild(new StaticAudioExampleApp());
+				// Prepare the audio data
+				
+				var baAudio:ByteArray = new ByteArray();
+				var seconds:Number = _bitmaps.length / FLV_FRAMERATE;
+				_sound = new Soundtrack();
+				_sound.extract(baAudio, seconds * 44000 + 1000); 
+				
+				// Make FlvEncoder object
+				_baFlvEncoder = new ByteArrayFlvEncoder(FLV_FRAMERATE);
+				_baFlvEncoder.setVideoProperties(OUTPUT_WIDTH, OUTPUT_HEIGHT);
+				_baFlvEncoder.setAudioProperties(FlvEncoder.SAMPLERATE_44KHZ, true,true, true);
+				_baFlvEncoder.start();
+				
+				// Make FLV:
+				
+				for (var i:int = 0; i < _bitmaps.length; i++) 
+				{
+					var audioChunk:ByteArray = new ByteArray();
+					audioChunk.writeBytes(baAudio, i * _baFlvEncoder.audioFrameSize, _baFlvEncoder.audioFrameSize);
+					
+					_baFlvEncoder.addFrame(_bitmaps[i], audioChunk);
+					
+//					_bitmaps[i].dispose();
+				}
+				_baFlvEncoder.updateDurationMetadata();
+				//
+				id_video_player.source = _baFlvEncoder.byteArray;
+				//
+				CursorManager.removeBusyCursor();
+			}
+			
+			private function button_output_clickHandler(event:MouseEvent):void
+			{
+				// Save FLV file via FileReference
+				var fileRef:FileReference = new FileReference();
+				fileRef.save(_baFlvEncoder.byteArray, "test.flv");
+				fileRef.addEventListener(Event.SELECT,selectedFunc);
+				fileRef.addEventListener(Event.COMPLETE,completeFunc);
+				// cleanup
+				_baFlvEncoder.kill();
+				//
+				function selectedFunc(event:Event):void
+				{
+//					flvPath = fileRef.name;	
+				}
+				//
+				function completeFunc(event:Event):void
+				{
+					id_video_player.source = fileRef.name;
+				}
+			}
+			
+			private function timelineDragDropHandler(event:DragEvent):void
+			{
+				var b:BitmapData = new BitmapData(OUTPUT_WIDTH,OUTPUT_HEIGHT,false,0x0);
+				b.draw(this.id_list_tpl);
+				_bitmaps.push(b);
+				//
+				
+			}
+			////
+			//called when the user drags an item into the component area
+			private function onNativeDragEnter(event:NativeDragEvent):void
+			{
+				//check and see if files are being drug in
+				if(event.clipboard.hasFormat(ClipboardFormats.FILE_LIST_FORMAT))
+				{
+					//accept the drag action
+					DragManager.acceptDragDrop(UIComponent(event.currentTarget));
+				}
+			}
+			
+			//called when the user drops an item over the component
+			private function onNativeDragDrop(event:NativeDragEvent):void
+			{
+				var fileList:Array = event.clipboard.getData(ClipboardFormats.FILE_LIST_FORMAT) as Array;
+				if(fileList)
+				{
+					var uploadedFlvFile:File = fileList[0] as File;
+					id_video_player.source = uploadedFlvFile.nativePath;
+				}
 			}
 			
 		]]>
@@ -47,7 +151,7 @@
 	
 	<s:Panel x="0" y="198" width="100%" height="200" backgroundColor="#93AE93" chromeColor="#555555"
 			 color="#CCCCCC" title="TimeLine">
-		<s:List id="id_list_timeline" x="2" y="7" width="100%" height="150" dropEnabled="true" itemRenderer="TemplateItemRenderer">
+		<s:List id="id_list_timeline" x="2" y="7" width="100%" height="150" dropEnabled="true" itemRenderer="TemplateItemRenderer" dragDrop="timelineDragDropHandler(event)">
 			<s:layout>
 				<s:HorizontalLayout/>
 			</s:layout>
@@ -55,14 +159,11 @@
 	</s:Panel>
 	
 	
-	<s:Panel x="653" y="379" backgroundColor="#93AE93" chromeColor="#555555" color="#CCCCCC"
+	<s:Panel x="-5" y="405" backgroundColor="#93AE93" chromeColor="#555555" color="#CCCCCC"
 			 title="FLVPlayer">
-		<s:VideoPlayer x="0" y="0" source="assets/test.flv"/>
+		<s:VideoPlayer id="id_video_player" x="0" y="0" autoPlay="true"/>
 	</s:Panel>
-	<s:Button bottom="50" label="START" click="button_start_clickHandler(event)" horizontalCenter="0"/>
-	<s:Panel x="2" y="375" width="321" height="261" backgroundColor="#93AE93"
-			 chromeColor="#555555" color="#CCCCCC" title="FLVPreview">
-		<s:SpriteVisualElement id="id_sve" />
-	</s:Panel>
+	<s:Button bottom="104" label="START" click="button_start_clickHandler(event)" horizontalCenter="2"/>
+	<s:Button bottom="47" label="OUTPUT" horizontalCenter="2" click="button_output_clickHandler(event)"/>
 	
 </s:WindowedApplication>
