@@ -1,29 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
-			   
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009"
 			   xmlns:s="library://ns.adobe.com/flex/spark"
-			   
 			   xmlns:mx="library://ns.adobe.com/flex/mx"
-			   
 			   minWidth="955" minHeight="600"
-			   
-			   creationComplete="itemData();">
-	
+			   creationComplete="windowedapplication_creationCompleteHandler(event)">
 	<fx:Script>
 
 		<![CDATA[
+			import leelibExamples.flvEncoder.basic.StaticAudioExampleApp;
 			
 			import mx.collections.ArrayList;
-			
-			private function itemData():void {
-				
-				id_list_tpl.dataProvider =
-					
-					new ArrayList(['Cold Drink', 'Peties',
-						
-						'Pestry','Chips','Cream Roll','Veg Roll']);
-				
+			import mx.events.FlexEvent;
+			//
+			protected function windowedapplication_creationCompleteHandler(event:FlexEvent):void
+			{
+				id_list_tpl.dataProvider = new ArrayList(['Cold Drink', 'Peties','Pestry','Chips','Cream Roll','Veg Roll']);
+				//
+				id_sve.addChild(new StaticAudioExampleApp());
 			}
 			
 		]]>
@@ -31,19 +24,14 @@
 	</fx:Script>
 	
 	<s:Panel title="Templates"
-			 
 			 chromeColor="#555555"
-			 
 			 color="#CCCCCC" width="100%" height="200" backgroundColor="#93AE93">
-		
 		<s:List id="id_list_tpl" x="0" y="7" width="100%" height="150"
 				allowMultipleSelection="true" color="#000000" contentBackgroundColor="#FFFBCF"
 				dragEnabled="true" dragMoveEnabled="false"/>
-		
 	</s:Panel>
 	
-	
-	<s:Panel x="0" y="233" width="100%" height="200" backgroundColor="#93AE93" chromeColor="#555555"
+	<s:Panel x="0" y="198" width="100%" height="200" backgroundColor="#93AE93" chromeColor="#555555"
 			 color="#CCCCCC" title="TimeLine">
 		<s:List id="id_list_timeline" x="2" y="7" width="100%" height="150" dropEnabled="true">
 			<s:layout>
@@ -52,4 +40,14 @@
 		</s:List>
 	</s:Panel>
 	
-</s:Application>
+	
+	<s:Panel x="653" y="379" backgroundColor="#93AE93" chromeColor="#555555" color="#CCCCCC"
+			 title="FLVPlayer">
+		<s:VideoPlayer x="0" y="0" source="assets/test.flv"/>
+	</s:Panel>
+	<s:Panel x="2" y="375" width="321" height="261" backgroundColor="#93AE93"
+			 chromeColor="#555555" color="#CCCCCC" title="FLVPreview">
+		<s:SpriteVisualElement id="id_sve" />
+	</s:Panel>
+	
+</s:WindowedApplication>
